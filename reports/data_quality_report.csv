@@ -1,0 +1,12 @@
+metric,value
+raw_rows,7043
+raw_columns,21
+cleaned_rows,7021
+cleaned_columns,20
+duplicate_rows_removed,22
+missing_values_in_raw,0
+numerical_columns,4
+categorical_columns,16
+target_churn_yes,1857
+target_churn_no,5164
+validation_passed,True

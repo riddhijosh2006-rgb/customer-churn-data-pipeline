@@ -1,0 +1,10 @@
+{
+  "run_at": "2026-08-26T10:29:11.082782+00:00",
+  "raw_rows": 7043,
+  "cleaned_rows": 7021,
+  "validation_passed": true,
+  "validation_issues": [],
+  "validation_warnings": [
+    "11 blank TotalCharges values will be coerced"
+  ]
+}
