@@ -1,195 +1,462 @@
 # 📊 Customer Churn Analytics & ML Pipeline
 
-An end-to-end platform for telecom customer churn that combines **Data
-Engineering**, **Data Analytics**, **Machine Learning**, and an
-**interactive dashboard** for prediction — not just a trained model.
+An end-to-end **Customer Churn Analytics and Machine Learning pipeline** that combines **Data Engineering, Data Analytics, Machine Learning, and interactive dashboard deployment** into a single reusable application.
+
+The project processes raw telecom customer data, validates and transforms it, generates analytical insights, trains machine learning models, and provides an interactive Streamlit dashboard for churn analysis and prediction.
 
 ---
 
-## 🚀 Overview
+## 🚀 Project Overview
 
-The project takes the raw **Telco Customer Churn dataset** and runs it
-through a reusable data pipeline, an analytics layer, and a machine
-learning pipeline, then surfaces all three through a single Streamlit
-application:
+Customer churn is a major business problem for subscription-based companies.
+
+The objective of this project is to:
+
+- Clean and validate customer data
+- Build a reusable data processing pipeline
+- Analyze customer churn patterns
+- Identify important customer segments
+- Train and compare machine learning models
+- Predict the probability of customer churn
+- Classify customers into different risk levels
+- Present the results through an interactive dashboard
+
+### End-to-End Workflow
 
 ```text
-Data Engineering  →  Data Analytics  →  Machine Learning  →  Deployment
+Raw Customer Data
+        ↓
+Data Ingestion
+        ↓
+Data Validation
+        ↓
+Data Cleaning
+        ↓
+Feature Engineering
+        ↓
+Processed Data
+        ↓
+   ┌────┴────┐
+   ↓         ↓
+Analytics    ML Pipeline
+   ↓         ↓
+Dashboard   Model Training
+              ↓
+        Model Evaluation
+              ↓
+         Saved Pipeline
+              ↓
+        Churn Prediction
 ```
 
-## 🎯 Problem Statement
+---
 
-Given information about a telecom customer — demographics, tenure,
-internet/phone services, contract type, payment method, and billing —
-predict whether the customer will churn (`Yes`) or stay (`No`). This
-is a binary classification problem.
+# 🎯 Problem Statement
+
+Given information about a telecom customer such as:
+
+- Demographics
+- Tenure
+- Contract type
+- Internet and phone services
+- Payment method
+- Monthly charges
+- Total charges
+
+the system predicts whether the customer is likely to **churn (`Yes`) or stay (`No`)**.
+
+This is treated as a **binary classification problem**.
 
 ---
 
-## 🏗️ Architecture
+# 🏗️ System Architecture
 
 ```text
-                        RAW DATA
-                           │
-                           ▼
+                         RAW DATA
+                            │
+                            ▼
                     DATA INGESTION
-                           │
-                           ▼
-                   DATA VALIDATION
-                           │
-                           ▼
-                    DATA CLEANING
-                           │
-                           ▼
-                 DATA TRANSFORMATION
-                           │
-                           ▼
-                  FEATURE ENGINEERING
-                           │
-                           ▼
+                            │
+                            ▼
+                    DATA VALIDATION
+                            │
+                            ▼
+                     DATA CLEANING
+                            │
+                            ▼
+                  DATA TRANSFORMATION
+                            │
+                            ▼
+                   FEATURE ENGINEERING
+                            │
+                            ▼
                     PROCESSED DATA
-                       /       \
-                      /         \
-                     ▼           ▼
-             ANALYTICS LAYER   ML PIPELINE
+                       /          \
+                      /            \
+                     ▼              ▼
+              ANALYTICS LAYER    ML PIPELINE
                      │              │
                      ▼              ▼
-               DASHBOARD      MODEL TRAINING
+                DASHBOARD       MODEL TRAINING
                                     │
                                     ▼
-                              SAVED MODEL
+                              MODEL EVALUATION
                                     │
                                     ▼
-                            ML PREDICTION
+                               SAVED MODEL
+                                    │
+                                    ▼
+                             CHURN PREDICTION
 ```
 
-**Data Pipeline** and **ML Pipeline** are kept deliberately separate:
-the data pipeline produces two outputs — a model-ready cleaned dataset
-(exact columns the trained model expects) and a separate,
-analytics-only feature set (with extra engineered columns for the
-dashboard). The analytics features are never fed into the ML model.
+A key design decision is keeping the **analytics features separate from the model-ready features**.
+
+The machine learning model receives only the columns it was trained on, while additional engineered features are used specifically for dashboard analytics.
 
 ---
 
-## 🧵 Data Pipeline
+# 🧵 Data Engineering Pipeline
 
-Location: `src/pipeline/`
+The data pipeline is located in:
+
+```text
+src/pipeline/
+```
+
+### Components
 
 | Module | Responsibility |
 |---|---|
-| `config.py` | Central paths, schema, feature-column list — single source of truth |
-| `data_ingestion.py` | Loads the raw CSV, checks it exists, logs shape/columns/dtypes |
-| `data_validation.py` | Checks required columns, duplicates, missing values, invalid types, unexpected categories, target distribution — returns a structured report instead of failing silently |
-| `data_transformation.py` | `clean_data()` (blank `TotalCharges` → numeric, drop `customerID`, drop duplicate rows) and `engineer_features()` (adds dashboard-only analytics columns) |
-| `data_pipeline.py` | `run_data_pipeline()` — single entry point that chains all of the above and writes outputs |
+| `config.py` | Central configuration, paths, schema and model feature definitions |
+| `data_ingestion.py` | Loads the raw CSV and checks data structure |
+| `data_validation.py` | Validates columns, duplicates, missing values, data types, categories and target distribution |
+| `data_transformation.py` | Cleans raw data and creates analytical features |
+| `data_pipeline.py` | Main entry point that executes the complete pipeline |
 
-Run the full pipeline from the project root:
+### Pipeline
+
+```text
+Raw CSV
+   ↓
+Ingestion
+   ↓
+Validation
+   ↓
+Cleaning
+   ↓
+Transformation
+   ↓
+Feature Engineering
+   ↓
+Processed Dataset
+   ↓
+Analytics + Machine Learning
+```
+
+### Run the pipeline
 
 ```bash
 python -m src.pipeline.data_pipeline
 ```
 
-This writes:
+### Pipeline Outputs
 
-- `data/processed/cleaned_telco_churn.csv` — the model-ready dataset
-- `data/processed/telco_churn_features.csv` — cleaned data + analytics features (TenureGroup, MonthlyChargeGroup, TotalChargesGroup, ServiceCount, IsLongTermCustomer, IsMonthToMonth, HighValueCustomer)
-- `reports/data_quality_report.csv` — row/column counts, duplicates removed, missing values, target distribution, validation status
-- `reports/last_pipeline_run.json` — timestamp and validation summary of the most recent run
+The pipeline generates:
 
-The raw CSV can live at either `data/raw/WA_Fn-UseC_-Telco-Customer-Churn.csv`
-(preferred) or the original `data/WA_Fn-UseC_-Telco-Customer-Churn.csv`
-location — ingestion checks both, so nothing breaks if you don't move
-the file.
+```text
+data/processed/cleaned_telco_churn.csv
+```
+
+Model-ready cleaned dataset.
+
+```text
+data/processed/telco_churn_features.csv
+```
+
+Cleaned dataset with additional analytics features.
+
+```text
+reports/data_quality_report.csv
+```
+
+Data quality and validation results.
+
+```text
+reports/last_pipeline_run.json
+```
+
+Timestamp and summary of the latest pipeline execution.
 
 ---
 
-## 📊 Analytics Layer
+# 🧹 Data Cleaning & Validation
 
-Location: `src/analytics/`
+The pipeline performs several data quality checks before the data reaches the analytics and ML stages.
+
+### Validation checks
+
+- Required columns
+- Missing values
+- Duplicate rows
+- Invalid data types
+- Unexpected categorical values
+- Target distribution
+- Dataset shape
+
+### Cleaning operations
+
+- Convert `TotalCharges` to numeric
+- Handle blank values
+- Remove duplicate records
+- Remove unnecessary `customerID`
+- Prepare consistent feature types
+
+This prevents invalid or inconsistent data from silently entering downstream processes.
+
+---
+
+# ⚙️ Feature Engineering
+
+The project creates additional features for analytics and customer segmentation.
+
+Examples include:
+
+- `TenureGroup`
+- `MonthlyChargeGroup`
+- `TotalChargesGroup`
+- `ServiceCount`
+- `IsLongTermCustomer`
+- `IsMonthToMonth`
+- `HighValueCustomer`
+
+These features are primarily used by the analytics layer and dashboard.
+
+---
+
+# 📊 Analytics Layer
+
+The analytics layer is located in:
+
+```text
+src/analytics/
+```
+
+### Components
 
 | Module | Responsibility |
 |---|---|
-| `churn_analysis.py` | Overall churn rate, churn rate by category/numeric bucket, average metric by churn status |
-| `customer_analysis.py` | Filtering, distributions, and three documented customer segmentations (tenure, value, churn-risk) |
-| `insights.py` | `generate_insights(df)` — computes the dashboard's "Key Insights" text live from the data, nothing hardcoded |
+| `churn_analysis.py` | Churn rates and comparisons across customer categories |
+| `customer_analysis.py` | Customer filtering, distributions and segmentation |
+| `insights.py` | Generates dashboard insights dynamically from the data |
+
+The dashboard does not rely on hardcoded analytical values.
+
+KPIs and charts are calculated from the processed data at runtime.
 
 ---
 
-## 🖥️ Dashboard
+# 🖥️ Interactive Streamlit Dashboard
 
-Location: `app/dashboard.py` (analytics pages) + `app/prediction.py` (ML page), wired together by `app/app.py`.
+The project includes a multi-page Streamlit dashboard.
 
-Sidebar-navigated pages:
+### Dashboard Pages
 
-- **🏠 Overview** — KPI cards (customers, churn rate, avg charges, avg tenure, revenue, high-risk count) + Key Insights
-- **📊 Data Analysis** — dataset shape/missing/duplicate stats, churn/gender/contract/internet/payment distributions
-- **👥 Customer Analysis** — demographic, behavioral, and service breakdowns with interactive filters (Contract, Internet Service, Gender, Senior Citizen, Payment Method, Churn), plus the three customer segmentations
-- **📈 Churn Analysis** — 10 churn-rate breakdowns (contract, internet service, payment method, tenure group, gender, senior citizen, monthly/total charges, service count) — rates, not just raw counts
-- **💳 Revenue & Charges** — monthly charges distribution, avg charges by churn status, charges vs tenure scatter, high-value vs standard segment
-- **🤖 ML Prediction** — the original prediction form, unchanged behavior, now also showing a Risk Level (Low / Medium / High)
-- **ℹ️ Data Quality** — live validation report, dtypes, column statistics, target distribution, and the last pipeline run log
+### 🏠 Overview
 
-All charts and KPIs are computed from the processed dataset at
-render time via `@st.cache_data` — nothing is a hardcoded number.
+Displays:
 
-### Segmentation rules (documented, not arbitrary)
+- Total customers
+- Churn rate
+- Average charges
+- Average tenure
+- Revenue
+- High-risk customers
+- Automatically generated key insights
 
-- **Tenure**: New < 12 months, Regular 12–36 months, Long-Term ≥ 36 months
-- **Value**: MonthlyCharges tertiles (Low / Medium / High), recomputed from the current data
-- **Churn risk**: uses the ML model's probability where available (< 30% Low, 30–60% Medium, ≥ 60% High); otherwise a documented contract+tenure proxy rule
+### 📊 Data Analysis
 
----
+Provides:
 
-## 🤖 Machine Learning
+- Dataset statistics
+- Missing-value analysis
+- Duplicate analysis
+- Churn distribution
+- Gender distribution
+- Contract distribution
+- Internet service distribution
+- Payment method distribution
 
-The existing ML pipeline (`src/train.py`, `src/model_comparison.py`,
-`src/hyperparameter_tuning.py`, `src/train_final.py`) is unchanged.
-Workflow:
+### 👥 Customer Analysis
+
+Provides interactive filtering and segmentation based on:
+
+- Contract
+- Internet service
+- Gender
+- Senior citizen status
+- Payment method
+- Churn status
+- Customer tenure
+- Customer value
+- Churn risk
+
+### 📈 Churn Analysis
+
+Analyzes churn rates across multiple dimensions:
+
+- Contract
+- Internet service
+- Payment method
+- Tenure
+- Gender
+- Senior citizen status
+- Monthly charges
+- Total charges
+- Number of services
+
+### 💳 Revenue & Charges
+
+Includes:
+
+- Monthly charge distribution
+- Average charges by churn status
+- Charges vs tenure
+- High-value customer analysis
+
+### 🤖 ML Prediction
+
+Allows users to enter customer information and receive:
+
+- Churn prediction
+- Churn probability
+- Risk level
+
+Risk levels:
 
 ```text
-Processed Data → Train/Test Split → Preprocessing (StandardScaler +
-OneHotEncoder) → Model Comparison (Logistic Regression / Random
-Forest / Gradient Boosting) → Hyperparameter Tuning (GridSearchCV) →
-Final Model (tuned Logistic Regression) → Saved Pipeline
-(models/churn_pipeline.joblib) → ML Prediction
+Low       → < 30%
+Medium    → 30% – 60%
+High      → ≥ 60%
 ```
 
-The trained pipeline expects exactly these 19 raw columns (see
-`src/pipeline/config.py::MODEL_FEATURE_COLUMNS`): `gender`,
-`SeniorCitizen`, `Partner`, `Dependents`, `tenure`, `PhoneService`,
-`MultipleLines`, `InternetService`, `OnlineSecurity`, `OnlineBackup`,
-`DeviceProtection`, `TechSupport`, `StreamingTV`, `StreamingMovies`,
-`Contract`, `PaperlessBilling`, `PaymentMethod`, `MonthlyCharges`,
-`TotalCharges`. The dashboard's extra analytics columns are never
-passed to it.
+### ℹ️ Data Quality
 
-To retrain (optional — not required to run the dashboard):
+Displays:
+
+- Validation results
+- Data types
+- Column statistics
+- Target distribution
+- Latest pipeline execution information
+
+---
+
+# 🤖 Machine Learning Pipeline
+
+The machine learning workflow is:
+
+```text
+Processed Dataset
+        ↓
+Train/Test Split
+        ↓
+Preprocessing
+        ↓
+Feature Encoding
+        ↓
+Feature Scaling
+        ↓
+Model Comparison
+        ↓
+Hyperparameter Tuning
+        ↓
+Final Model
+        ↓
+Saved ML Pipeline
+        ↓
+Churn Prediction
+```
+
+### Models Compared
+
+The project compares:
+
+- Logistic Regression
+- Random Forest
+- Gradient Boosting
+
+### Preprocessing
+
+The ML pipeline uses:
+
+- `StandardScaler`
+- `OneHotEncoder`
+- `ColumnTransformer`
+
+### Hyperparameter Tuning
+
+`GridSearchCV` is used to identify suitable model parameters.
+
+### Final Model
+
+The final tuned Logistic Regression pipeline is saved as:
+
+```text
+models/churn_pipeline.joblib
+```
+
+The saved pipeline can then be used directly for customer churn prediction.
+
+---
+
+# 🔬 Model Training
+
+The main ML scripts are:
+
+```text
+src/model_comparison.py
+src/hyperparameter_tuning.py
+src/train.py
+src/train_final.py
+```
+
+### Train / compare models
 
 ```bash
 python src/model_comparison.py
+```
+
+### Run hyperparameter tuning
+
+```bash
 python src/hyperparameter_tuning.py
+```
+
+### Train the final model
+
+```bash
 python src/train_final.py
 ```
 
 ---
 
-## 📂 Project Structure
+# 📁 Project Structure
 
 ```text
-customer-churn-ml-pipeline/
+customer-churn-data-pipeline/
 │
 ├── app/
-│   ├── app.py              # Streamlit entry point, sidebar navigation
-│   ├── dashboard.py         # Analytics pages (Overview, Data Analysis, etc.)
-│   └── prediction.py        # ML Prediction page
+│   ├── app.py
+│   ├── dashboard.py
+│   └── prediction.py
 │
 ├── data/
 │   ├── raw/
 │   │   └── WA_Fn-UseC_-Telco-Customer-Churn.csv
-│   ├── WA_Fn-UseC_-Telco-Customer-Churn.csv   # legacy location, still supported
+│   │
 │   └── processed/
-│       ├── cleaned_telco_churn.csv            # model-ready
-│       └── telco_churn_features.csv           # + analytics features
+│       ├── cleaned_telco_churn.csv
+│       └── telco_churn_features.csv
 │
 ├── models/
 │   └── churn_pipeline.joblib
@@ -211,10 +478,10 @@ customer-churn-ml-pipeline/
 │   │   ├── customer_analysis.py
 │   │   └── insights.py
 │   │
-│   ├── data_cleaning.py         # standalone reference script
+│   ├── data_cleaning.py
 │   ├── data_inspection.py
 │   ├── eda.py
-│   ├── feature_engineering.py   # standalone reference script
+│   ├── feature_engineering.py
 │   ├── preprocessing.py
 │   ├── model_comparison.py
 │   ├── hyperparameter_tuning.py
@@ -229,50 +496,220 @@ customer-churn-ml-pipeline/
 
 ---
 
-## ▶️ How to Run
+# ▶️ How to Run
 
-Windows:
+## 1. Clone the repository
+
+```bash
+git clone https://github.com/riddhijosh2006-rgb/customer-churn-data-pipeline.git
+```
+
+```bash
+cd customer-churn-data-pipeline
+```
+
+## 2. Create a virtual environment
+
+### Windows
 
 ```bash
 python -m venv venv
-venv\Scripts\activate
-pip install -r requirements.txt
-python -m src.pipeline.data_pipeline
-streamlit run app/app.py
 ```
 
-macOS / Linux:
+```bash
+venv\Scripts\activate
+```
+
+### macOS / Linux
 
 ```bash
 python3 -m venv venv
+```
+
+```bash
 source venv/bin/activate
+```
+
+## 3. Install dependencies
+
+```bash
 pip install -r requirements.txt
+```
+
+## 4. Run the data pipeline
+
+```bash
 python -m src.pipeline.data_pipeline
+```
+
+## 5. Launch the dashboard
+
+```bash
 streamlit run app/app.py
 ```
 
-Running the data pipeline first is recommended (it generates the
-analytics feature file and the data-quality report), but the
-dashboard will also compute analytics features on the fly if you
-skip that step.
+The application will open in your browser.
 
 ---
 
-## 🧰 Technologies
+# 🧪 Testing & Validation
 
-Python · Pandas · NumPy · Scikit-learn · Streamlit · Plotly · Joblib
+The project has been tested across the major pipeline components.
+
+### Data Pipeline
+
+The complete data pipeline was executed successfully.
+
+```text
+Raw rows:       7,043
+Cleaned rows:   7,021
+Duplicates removed: 22
+```
+
+The pipeline successfully generated the data-quality report and latest pipeline execution log.
+
+### ML Pipeline
+
+The saved machine learning pipeline was tested against the cleaned dataset without column mismatch.
+
+### Dashboard
+
+All dashboard pages were tested, including the ML prediction workflow.
+
+### Code Validation
+
+Python source files were checked using:
+
+```bash
+python -m py_compile
+```
 
 ---
 
-## ✅ Testing Performed
+# 🧰 Technology Stack
 
-- `python -m src.pipeline.data_pipeline` run end-to-end: raw 7,043 rows → 7,021 cleaned rows (22 exact duplicate rows removed), quality report and run log generated correctly.
-- Confirmed the existing `models/churn_pipeline.joblib` predicts correctly on the newly cleaned data (no column mismatch).
-- All 7 dashboard pages exercised headlessly via Streamlit's `AppTest` harness — zero exceptions, including clicking "Predict Churn" and getting a probability + risk level back.
-- `src/train_final.py` re-run successfully against the new cleaned dataset (produces an equivalent pipeline); the original shipped `churn_pipeline.joblib` was restored afterward so the shipped model is unchanged, per the "don't replace the model unnecessarily" requirement.
-- All new/modified `.py` files pass `python -m py_compile`.
+| Technology | Purpose |
+|---|---|
+| Python | Core development |
+| Pandas | Data processing |
+| NumPy | Numerical operations |
+| Scikit-learn | Machine Learning |
+| Streamlit | Interactive dashboard |
+| Plotly | Data visualization |
+| Joblib | Model serialization |
+| Git | Version control |
+| GitHub | Source control and project documentation |
 
-## ⚠️ Known Issues / Remaining Items
+---
 
-- Streamlit's `use_container_width` parameter is deprecated in newer Streamlit versions (still functional, shows a warning) — cosmetic only, not a functional issue.
-- `src/data_cleaning.py` and `src/feature_engineering.py` are kept as standalone reference scripts and now carry a comment pointing to their reusable counterparts in `src/pipeline/`, rather than being deleted, to avoid breaking anyone used to running them directly.
+# 📈 Key Engineering Concepts Demonstrated
+
+This project demonstrates practical experience with:
+
+### Data Engineering
+
+- Data ingestion
+- Data validation
+- Data cleaning
+- Data transformation
+- Feature engineering
+- Data quality reporting
+- Pipeline modularization
+- Reusable pipeline design
+
+### Data Analytics
+
+- Exploratory Data Analysis
+- Customer segmentation
+- Churn analysis
+- KPI generation
+- Business insights
+- Interactive filtering
+- Data visualization
+
+### Machine Learning
+
+- Binary classification
+- Feature preprocessing
+- Model comparison
+- Logistic Regression
+- Random Forest
+- Gradient Boosting
+- Hyperparameter tuning
+- Model serialization
+- Prediction probability
+- Risk classification
+
+### Deployment
+
+- Streamlit application
+- Reusable ML pipeline
+- Interactive prediction interface
+
+---
+
+# 💡 Business Value
+
+The project can help a telecom business answer questions such as:
+
+- Which customers are most likely to churn?
+- Which contracts have the highest churn rate?
+- How does tenure affect customer retention?
+- Which services are associated with higher churn?
+- Which customers have high churn risk?
+- Which customer segments should receive retention efforts?
+
+The ML prediction layer adds a forward-looking component by identifying customers who may be at higher risk of leaving.
+
+---
+
+# 🚧 Future Improvements
+
+Planned improvements include:
+
+- [ ] Apache Airflow orchestration
+- [ ] Automated scheduled pipeline execution
+- [ ] Automated data-quality testing
+- [ ] Unit and integration tests
+- [ ] Docker containerization
+- [ ] CI/CD pipeline
+- [ ] Model monitoring
+- [ ] Model drift detection
+- [ ] Cloud deployment
+- [ ] Automated model retraining
+- [ ] Production API for model inference
+
+---
+
+# 👨‍💻 About
+
+Built as a practical project to explore the intersection of:
+
+**Data Engineering → Data Analytics → Machine Learning → Deployment**
+
+The project focuses on building a reusable workflow rather than creating a standalone machine learning notebook.
+
+---
+
+## ⭐ Project Highlights
+
+```text
+✅ Reusable Data Pipeline
+✅ Data Validation
+✅ Data Quality Reporting
+✅ Feature Engineering
+✅ Customer Analytics
+✅ Multiple ML Models
+✅ Hyperparameter Tuning
+✅ Saved ML Pipeline
+✅ Churn Probability
+✅ Customer Risk Levels
+✅ Interactive Streamlit Dashboard
+```
+
+---
+
+## 📫 Connect
+
+**GitHub:**  
+https://github.com/riddhijosh2006-rgb
